@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -187,9 +187,9 @@
             </select>
         </div>
         <div id="chat-box"></div>
-        <div id="loading" class="loading">Thinking...</div>
+        <div id="loading" class="loading">AI is thinking...</div>
         <div id="user-input-container">
-            <textarea id="user-input" placeholder="Write your Message..." rows="1"></textarea>
+            <textarea id="user-input" placeholder="Type your message..." rows="1"></textarea>
         </div>
     </div>
 
@@ -199,11 +199,11 @@
         const modelSelect = document.getElementById('model-select');
         const loading = document.getElementById('loading');
 
-        // Utilisation d'une API serverless pour obtenir la clé API de manière sécurisée
+        // Using serverless API to securely access the Groq API key
         const apiEndpoint = '/api/groq-proxy';
         const modelsEndpoint = '/api/models';
         
-        // Ajuster la hauteur du textarea automatiquement
+        // Adjust textarea height automatically
         userInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
@@ -230,19 +230,19 @@
                     modelSelect.appendChild(option);
                 });
             } catch (error) {
-                console.error('Errors while loading models :', error);
-                modelSelect.innerHTML = '<option value="">Errors while loading models</option>';
+                console.error('Error loading models:', error);
+                modelSelect.innerHTML = '<option value="">Loading error</option>';
                 
                 const errorMessage = document.createElement('div');
                 errorMessage.classList.add('error-message');
-                errorMessage.textContent = 'Impossible to load Models please try again later.';
+                errorMessage.textContent = 'Unable to load models. Please check your connection or try again later.';
                 chatBox.appendChild(errorMessage);
             }
         }
 
         async function sendMessage(message, model) {
             try {
-                loading.style.display = 'block'; // Afficher le chargement
+                loading.style.display = 'block'; // Show loading indicator
                 const response = await fetch(apiEndpoint, {
                     method: 'POST',
                     headers: {
@@ -261,15 +261,15 @@
                 const data = await response.json();
                 return data.content.trim();
             } catch (error) {
-                console.error('Erreur lors de l\'envoi du message :', error);
-                return 'Désolé, une erreur s\'est produite lors de la communication avec l\'API Groq.';
+                console.error('Error sending message:', error);
+                return 'Sorry, an error occurred while communicating with the Groq API.';
             } finally {
-                loading.style.display = 'none'; // Masquer le chargement
+                loading.style.display = 'none'; // Hide loading indicator
             }
         }
 
         function formatText(text) {
-            // Traitement des blocs de code
+            // Process code blocks
             text = text.replace(/```([\s\S]*?)```/g, function(match, p1) {
                 const language = p1.split('\n')[0].trim();
                 let code = p1;
@@ -279,10 +279,10 @@
                 return `<pre><code>${code}</code></pre>`;
             });
             
-            // Traitement des sauts de ligne
+            // Process line breaks
             text = text.replace(/\n/g, '<br>');
             
-            // Traitement des listes
+            // Process bullet points
             text = text.replace(/<br>- (.*?)(?=<br>|$)/g, '<br>• $1');
             
             return text;
@@ -294,7 +294,7 @@
 
             const messageHeader = document.createElement('div');
             messageHeader.classList.add('message-header');
-            messageHeader.textContent = sender === 'user' ? 'Vous' : 'Groq';
+            messageHeader.textContent = sender === 'user' ? 'You' : 'Groq';
             messageContainer.appendChild(messageHeader);
 
             const messageElement = document.createElement('div');
@@ -307,13 +307,13 @@
                 preElements.forEach(pre => {
                     const copyButton = document.createElement('button');
                     copyButton.classList.add('copy-button');
-                    copyButton.textContent = 'Copier';
+                    copyButton.textContent = 'Copy';
                     copyButton.addEventListener('click', () => {
                         const code = pre.querySelector('code').textContent;
                         navigator.clipboard.writeText(code).then(() => {
-                            copyButton.textContent = 'Copié !';
+                            copyButton.textContent = 'Copied!';
                             setTimeout(() => {
-                                copyButton.textContent = 'Copier';
+                                copyButton.textContent = 'Copy';
                             }, 2000);
                         });
                     });
@@ -328,7 +328,7 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // Gestion de l'envoi des messages avec Enter (Shift+Enter pour nouvelle ligne)
+        // Send message using Enter (Shift+Enter for new line)
         userInput.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
