@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat avec Groq</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #2d2d2d;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        #chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: #333;
+            border-bottom: 1px solid #444;
+        }
+
+        #chat-title {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        #model-select {
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            background-color: #444;
+            color: #e0e0e0;
+            cursor: pointer;
+        }
+
+        #chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        #user-input-container {
+            display: flex;
+            padding: 15px;
+            background-color: #3d3d3d;
+            border-top: 1px solid #444;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            background-color: #444;
+            color: #e0e0e0;
+            outline: none;
+            font-size: 16px;
+            resize: none;
+            height: 24px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            padding-left: 10px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 100%;
+            word-wrap: break-word;
+        }
+
+        .user-container {
+            align-items: flex-end;
+        }
+
+        .bot-container {
+            align-items: flex-start;
+        }
+
+        .message.user {
+            background-color: #444;
+            color: #fff;
+        }
+
+        .message.bot {
+            background-color: #555;
+            color: #fff;
+        }
+
+        .message.bot pre {
+            background-color: #1e1e1e;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .message.bot pre code {
+            display: block;
+            font-family: 'Courier New', Courier, monospace;
+            color: #e0e0e0;
+            white-space: pre-wrap;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #444;
+            border: none;
+            color: #e0e0e0;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .copy-button:hover {
+            background-color: #555;
+            opacity: 1;
+        }
+
+        .loading {
+            display: none;
+            padding: 10px;
+            color: #e0e0e0;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            padding: 10px;
+            text-align: center;
+            background-color: rgba(255, 107, 107, 0.1);
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            #chat-container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">
+            <div id="chat-title">Chat avec Groq</div>
+            <select id="model-select">
+                <option value="">Chargement des modèles...</option>
+            </select>
+        </div>
+        <div id="chat-box"></div>
+        <div id="loading" class="loading">L'IA réfléchit...</div>
+        <div id="user-input-container">
+            <textarea id="user-input" placeholder="Tapez votre message..." rows="1"></textarea>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const modelSelect = document.getElementById('model-select');
+        const loading = document.getElementById('loading');
+
+        // Utilisation d'une API serverless pour obtenir la clé API de manière sécurisée
+        const apiEndpoint = '/api/groq-proxy';
+        const modelsEndpoint = '/api/models';
+        
+        // Ajuster la hauteur du textarea automatiquement
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if (this.scrollHeight > 150) {
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+        });
+
+        async function loadModels() {
+            try {
+                const response = await fetch(modelsEndpoint);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                modelSelect.innerHTML = '';
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.id;
+                    modelSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des modèles :', error);
+                modelSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+                
+                const errorMessage = document.createElement('div');
+                errorMessage.classList.add('error-message');
+                errorMessage.textContent = 'Impossible de charger les modèles. Veuillez vérifier votre connexion ou réessayer plus tard.';
+                chatBox.appendChild(errorMessage);
+            }
+        }
+
+        async function sendMessage(message, model) {
+            try {
+                loading.style.display = 'block'; // Afficher le chargement
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        message: message
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data.content.trim();
+            } catch (error) {
+                console.error('Erreur lors de l\'envoi du message :', error);
+                return 'Désolé, une erreur s\'est produite lors de la communication avec l\'API Groq.';
+            } finally {
+                loading.style.display = 'none'; // Masquer le chargement
+            }
+        }
+
+        function formatText(text) {
+            // Traitement des blocs de code
+            text = text.replace(/```([\s\S]*?)```/g, function(match, p1) {
+                const language = p1.split('\n')[0].trim();
+                let code = p1;
+                if (language && !p1.startsWith(language + '\n')) {
+                    code = p1.substring(language.length).trim();
+                }
+                return `<pre><code>${code}</code></pre>`;
+            });
+            
+            // Traitement des sauts de ligne
+            text = text.replace(/\n/g, '<br>');
+            
+            // Traitement des listes
+            text = text.replace(/<br>- (.*?)(?=<br>|$)/g, '<br>• $1');
+            
+            return text;
+        }
+
+        function addMessage(sender, message) {
+            const messageContainer = document.createElement('div');
+            messageContainer.classList.add('message-container', sender === 'user' ? 'user-container' : 'bot-container');
+
+            const messageHeader = document.createElement('div');
+            messageHeader.classList.add('message-header');
+            messageHeader.textContent = sender === 'user' ? 'Vous' : 'Groq';
+            messageContainer.appendChild(messageHeader);
+
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender);
+
+            if (sender === 'bot') {
+                messageElement.innerHTML = formatText(message);
+
+                const preElements = messageElement.querySelectorAll('pre');
+                preElements.forEach(pre => {
+                    const copyButton = document.createElement('button');
+                    copyButton.classList.add('copy-button');
+                    copyButton.textContent = 'Copier';
+                    copyButton.addEventListener('click', () => {
+                        const code = pre.querySelector('code').textContent;
+                        navigator.clipboard.writeText(code).then(() => {
+                            copyButton.textContent = 'Copié !';
+                            setTimeout(() => {
+                                copyButton.textContent = 'Copier';
+                            }, 2000);
+                        });
+                    });
+                    pre.appendChild(copyButton);
+                });
+            } else {
+                messageElement.textContent = message;
+            }
+
+            messageContainer.appendChild(messageElement);
+            chatBox.appendChild(messageContainer);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Gestion de l'envoi des messages avec Enter (Shift+Enter pour nouvelle ligne)
+        userInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const userMessage = userInput.value.trim();
+                const selectedModel = modelSelect.value;
+
+                if (userMessage && selectedModel) {
+                    addMessage('user', userMessage);
+                    userInput.value = '';
+                    userInput.style.height = 'auto';
+
+                    const botMessage = await sendMessage(userMessage, selectedModel);
+                    addMessage('bot', botMessage);
+                }
+            }
+        });
+
+        loadModels();
+    </script>
+</body>
+</html>
