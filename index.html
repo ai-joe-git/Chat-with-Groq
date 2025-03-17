@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat avec Groq</title>
+    <title>Chat with Groq</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -181,15 +181,15 @@
 <body>
     <div id="chat-container">
         <div id="chat-header">
-            <div id="chat-title">Chat avec Groq</div>
+            <div id="chat-title">Chat with Groq</div>
             <select id="model-select">
-                <option value="">Chargement des modèles...</option>
+                <option value="">Loading models...</option>
             </select>
         </div>
         <div id="chat-box"></div>
-        <div id="loading" class="loading">L'IA réfléchit...</div>
+        <div id="loading" class="loading">Thinking...</div>
         <div id="user-input-container">
-            <textarea id="user-input" placeholder="Tapez votre message..." rows="1"></textarea>
+            <textarea id="user-input" placeholder="Write your Message..." rows="1"></textarea>
         </div>
     </div>
 
@@ -230,12 +230,12 @@
                     modelSelect.appendChild(option);
                 });
             } catch (error) {
-                console.error('Erreur lors du chargement des modèles :', error);
-                modelSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+                console.error('Errors while loading models :', error);
+                modelSelect.innerHTML = '<option value="">Errors while loading models</option>';
                 
                 const errorMessage = document.createElement('div');
                 errorMessage.classList.add('error-message');
-                errorMessage.textContent = 'Impossible de charger les modèles. Veuillez vérifier votre connexion ou réessayer plus tard.';
+                errorMessage.textContent = 'Impossible to load Models please try again later.';
                 chatBox.appendChild(errorMessage);
             }
         }
