@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with Groq</title>
+    <title>Chat with LivAI</title>
     <style>
         * {
             box-sizing: border-box;
@@ -258,7 +258,7 @@
 <body>
     <div id="chat-container">
         <div id="chat-header">
-            <div id="chat-title">Chat with Groq</div>
+            <div id="chat-title">Chat with LivAI</div>
             <select id="model-select">
                 <option value="">Loading models...</option>
             </select>
@@ -407,7 +407,7 @@
 
             const messageHeader = document.createElement('div');
             messageHeader.classList.add('message-header');
-            messageHeader.textContent = sender === 'user' ? 'You' : 'Groq';
+            messageHeader.textContent = sender === 'user' ? 'You' : 'LivAI';
             messageContainer.appendChild(messageHeader);
 
             const messageElement = document.createElement('div');
