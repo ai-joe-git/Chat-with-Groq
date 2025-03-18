@@ -3,28 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with LivAI</title>
+    <title>Chat with Groq</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
-            height: 100vh;
             background-color: #1e1e1e;
             color: #e0e0e0;
-            overflow: hidden;
         }
 
         #chat-container {
             width: 100%;
             max-width: 800px;
-            height: 100vh;
+            height: 100%;
             display: flex;
             flex-direction: column;
             background-color: #2d2d2d;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
         }
 
         #chat-header {
@@ -34,6 +44,8 @@
             padding: 10px 15px;
             background-color: #333;
             border-bottom: 1px solid #444;
+            min-height: 60px;
+            z-index: 10;
         }
 
         #chat-title {
@@ -57,13 +69,20 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+            margin-bottom: 80px; /* Ensure space for input area */
         }
 
         #user-input-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
             display: flex;
             padding: 15px;
             background-color: #3d3d3d;
             border-top: 1px solid #444;
+            min-height: 60px;
+            z-index: 10;
         }
 
         #user-input {
@@ -76,7 +95,7 @@
             outline: none;
             font-size: 16px;
             resize: none;
-            height: 24px;
+            min-height: 24px;
             max-height: 150px;
             overflow-y: auto;
         }
@@ -169,11 +188,69 @@
             margin-bottom: 10px;
         }
 
+        /* Improved mobile responsiveness */
         @media (max-width: 768px) {
             #chat-container {
                 width: 100%;
-                height: 100vh;
+                height: 100%;
                 border-radius: 0;
+            }
+            
+            #chat-header {
+                min-height: 50px;
+                padding: 8px 10px;
+            }
+            
+            #chat-title {
+                font-size: 16px;
+            }
+            
+            #model-select {
+                font-size: 14px;
+                padding: 6px;
+                max-width: 40%;
+            }
+            
+            #chat-box {
+                padding: 10px;
+                margin-bottom: 70px; /* Ensure space for input on mobile */
+            }
+            
+            #user-input-container {
+                padding: 10px;
+                min-height: 60px;
+            }
+            
+            #user-input {
+                padding: 10px;
+                font-size: 16px;
+            }
+            
+            .message {
+                padding: 12px;
+                font-size: 15px;
+            }
+            
+            /* Fix for iOS Safari viewport height issues */
+            @supports (-webkit-touch-callout: none) {
+                html, body {
+                    height: -webkit-fill-available;
+                }
+                
+                #chat-container {
+                    height: -webkit-fill-available;
+                }
+            }
+        }
+
+        /* Fix virtual keyboard issues on mobile */
+        @media (max-height: 450px) {
+            #chat-box {
+                margin-bottom: 60px;
+            }
+            
+            #user-input-container {
+                min-height: 50px;
             }
         }
     </style>
@@ -181,13 +258,13 @@
 <body>
     <div id="chat-container">
         <div id="chat-header">
-            <div id="chat-title">Chat LivAI</div>
+            <div id="chat-title">Chat with Groq</div>
             <select id="model-select">
                 <option value="">Loading models...</option>
             </select>
         </div>
         <div id="chat-box"></div>
-        <div id="loading" class="loading">LivAI is thinking...</div>
+        <div id="loading" class="loading">AI is thinking...</div>
         <div id="user-input-container">
             <textarea id="user-input" placeholder="Type your message..." rows="1"></textarea>
         </div>
@@ -203,15 +280,46 @@
         const apiEndpoint = '/api/groq-proxy';
         const modelsEndpoint = '/api/models';
         
+        // Focus input field when page loads
+        window.addEventListener('load', function() {
+            // Small delay to ensure all elements are properly loaded
+            setTimeout(() => {
+                userInput.focus();
+            }, 500);
+        });
+        
         // Adjust textarea height automatically
         userInput.addEventListener('input', function() {
             this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+            
             if (this.scrollHeight > 150) {
                 this.style.overflowY = 'auto';
             } else {
                 this.style.overflowY = 'hidden';
             }
+            
+            // Ensure chat box doesn't overlap with growing input
+            chatBox.style.marginBottom = (this.offsetHeight + 30) + 'px';
+        });
+
+        // Reset input height when message is sent
+        function resetInputHeight() {
+            userInput.style.height = 'auto';
+            chatBox.style.marginBottom = '80px';
+            
+            // On mobile, use smaller margin
+            if (window.innerWidth <= 768) {
+                chatBox.style.marginBottom = '70px';
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            resetInputHeight();
+            
+            // Scroll chat to bottom on resize
+            chatBox.scrollTop = chatBox.scrollHeight;
         });
 
         async function loadModels() {
@@ -229,6 +337,11 @@
                     option.textContent = model.id;
                     modelSelect.appendChild(option);
                 });
+                
+                // Select first model by default
+                if (data.models.length > 0) {
+                    modelSelect.value = data.models[0].id;
+                }
             } catch (error) {
                 console.error('Error loading models:', error);
                 modelSelect.innerHTML = '<option value="">Loading error</option>';
@@ -325,27 +438,53 @@
 
             messageContainer.appendChild(messageElement);
             chatBox.appendChild(messageContainer);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            // Scroll to bottom after adding message
+            setTimeout(() => {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 10);
+        }
+
+        // Send message function
+        async function handleSendMessage() {
+            const userMessage = userInput.value.trim();
+            const selectedModel = modelSelect.value;
+
+            if (userMessage && selectedModel) {
+                addMessage('user', userMessage);
+                userInput.value = '';
+                resetInputHeight();
+                userInput.focus();
+
+                const botMessage = await sendMessage(userMessage, selectedModel);
+                addMessage('bot', botMessage);
+            }
         }
 
         // Send message using Enter (Shift+Enter for new line)
         userInput.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                const userMessage = userInput.value.trim();
-                const selectedModel = modelSelect.value;
-
-                if (userMessage && selectedModel) {
-                    addMessage('user', userMessage);
-                    userInput.value = '';
-                    userInput.style.height = 'auto';
-
-                    const botMessage = await sendMessage(userMessage, selectedModel);
-                    addMessage('bot', botMessage);
-                }
+                await handleSendMessage();
             }
         });
 
+        // Fix for iOS Safari viewport height issues
+        function handleMobileViewportHeight() {
+            // First we get the viewport height and multiply it by 1% to get a value for a vh unit
+            let vh = window.innerHeight * 0.01;
+            // Then we set the value in the --vh custom property to the root of the document
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+
+        // Run it on first load
+        handleMobileViewportHeight();
+        
+        // Run it on resize and orientation change
+        window.addEventListener('resize', handleMobileViewportHeight);
+        window.addEventListener('orientationchange', handleMobileViewportHeight);
+
+        // Load models when page loads
         loadModels();
     </script>
 </body>
